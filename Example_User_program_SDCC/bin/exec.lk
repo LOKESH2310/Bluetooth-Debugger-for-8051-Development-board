@@ -1,0 +1,17 @@
+-muwx
+-i bin/exec.ihx
+-M
+-X 0x7fff
+-C 0x8000
+-b HOME = 0x4000
+-b ISEG = 0x0000
+-b BSEG = 0x0000
+-k C:\Program Files (x86)\SDCC\bin\..\lib\large
+-l mcs51
+-l libsdcc
+-l libint
+-l liblong
+-l libfloat
+bin/main.rel
+
+-e

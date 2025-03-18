@@ -1,0 +1,154 @@
+C51 COMPILER V9.60.7.0   HEY                                                               12/02/2024 10:55:39 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE HEY
+OBJECT MODULE PLACED IN .\Objects\hey.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE hey.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\hey.l
+                    -st) TABS(2) OBJECT(.\Objects\hey.obj)
+
+line level    source
+
+   1          //#include <8051.h>
+   2          #include<stdio.h>
+   3          
+   4          // Function Prototypes
+   5          void uart_init();
+   6          void uart_transmit(char c);
+   7          void uart_print(const char *str);
+   8          void jump_to_user_code();
+   9          
+  10            unsigned char TMOD = *((unsigned char*) 0x88);
+*** ERROR C247 IN LINE 10 OF hey.c: non-address/-constant initializer
+  11            unsigned char TH1 = *((unsigned char*) 0x00);
+*** ERROR C247 IN LINE 11 OF hey.c: non-address/-constant initializer
+  12            unsigned char SCON = *((unsigned char*) 0x00);
+*** ERROR C247 IN LINE 12 OF hey.c: non-address/-constant initializer
+  13            unsigned char TR1 = *((unsigned char __xdata *) 0x00);
+*** ERROR C141 IN LINE 13 OF hey.c: syntax error near '__xdata', expected ')'
+*** ERROR C202 IN LINE 13 OF hey.c: '__xdata': undefined identifier
+  14            unsigned char TI = *((unsigned char __xdata *) 0x00);
+*** ERROR C141 IN LINE 14 OF hey.c: syntax error near '__xdata', expected ')'
+  15            
+  16              unsigned char SBUF = *((unsigned char __xdata *) 0x00);
+*** ERROR C141 IN LINE 16 OF hey.c: syntax error near '__xdata', expected ')'
+  17            unsigned char TI = *((unsigned char __xdata *) 0x00);
+*** ERROR C279 IN LINE 17 OF hey.c: 'TI': multiple initialization
+*** ERROR C141 IN LINE 17 OF hey.c: syntax error near '__xdata', expected ')'
+  18            unsigned char RI = *((unsigned char __xdata *) 0x00);
+*** ERROR C141 IN LINE 18 OF hey.c: syntax error near '__xdata', expected ')'
+  19          
+  20          
+  21          // UART Initialization
+  22          void uart_init(void) 
+  23          {
+  24   1          TMOD |= 0x20;               // Set Timer 1 in Mode 2 (8-bit auto-reload)
+  25   1          TH1 = 0xFD;                 // Set reload value for 9600 baud rate (11.0592 MHz clock)
+  26   1          SCON = 0x50;                // 8-bit UART mode, REN enabled (Receive Enable)
+  27   1          TR1 = 1;                    // Start Timer 1
+  28   1          TI = 1;                     // Set TI to indicate transmitter is ready
+  29   1      }
+  30          
+  31          // putchar() Function: Transmit a Character via UART
+  32          int putchar(int c)
+  33          {
+*** ERROR C231 IN LINE 33 OF hey.c: '_putchar': redefinition
+  34   1          SBUF = c;                   // Load the character into the UART buffer (SBUF)
+  35   1          while (!TI);                // Wait for transmission to complete (TI flag set)
+  36   1          TI = 0;                     // Clear the TI flag for the next transmission
+  37   1          return c;                   // Return the transmitted character
+  38   1      }
+*** ERROR C231 IN LINE 38 OF hey.c: '_putchar': redefinition
+  39          
+  40          // getchar() Function: Receive a Character via UART
+  41          int getchar(void) {
+*** ERROR C231 IN LINE 41 OF hey.c: 'getchar': redefinition
+C51 COMPILER V9.60.7.0   HEY                                                               12/02/2024 10:55:39 PAGE 2   
+
+  42   1          while (!RI);                // Wait for a character to be received (RI flag set)
+  43   1          RI = 0;                     // Clear the RI flag for the next reception
+  44   1          return SBUF;                // Return the received character from the UART buffer (SBUF)
+  45   1      }
+*** ERROR C231 IN LINE 45 OF hey.c: 'getchar': redefinition
+  46          
+  47          
+  48          // Jump to User Code at 0x4000
+  49          void jump_to_user_code() {
+  50   1          printf("Jumping to user code...\n");
+  51   1          void (user_code)(void) = (void ()(void))0x4000;  // Function pointer to user code
+*** ERROR C141 IN LINE 51 OF hey.c: syntax error near 'void', expected '__asm'
+*** ERROR C202 IN LINE 51 OF hey.c: 'user_code': undefined identifier
+*** ERROR C141 IN LINE 51 OF hey.c: syntax error near 'void', expected 'sizeof'
+  52   1          user_code();  // Jump to user code
+  53   1      }
+  54          
+  55          
+  56          // INT1 Interrupt Handler
+  57          void int1_handler() __interrupt(2) __using(1) {
+  58          
+  59          
+  60              while (getchar() != '\r');
+  61          
+  62              unsigned char SP = *((unsigned char __xdata *) 0x81);
+  63            unsigned char PSW = *((unsigned char __xdata *) 0xD0);
+  64            unsigned char DPH = *((unsigned char __xdata *) 0x83);
+  65            unsigned char DPL = *((unsigned char __xdata *) 0x82);
+  66              unsigned char ACC = *((unsigned char __xdata *) 0xE0);
+  67            unsigned char B = *((unsigned char __xdata *) 0xF0);
+  68          
+  69              unsigned char *sp_addr;     // Pointer to the stack location
+  70              unsigned int pc_value;      // To hold the PC value
+  71              sp_addr = (unsigned char *)SP;
+  72               // Adjust SP to point to the saved PC on the stack
+  73              // Subtract (number of PUSH instructions + 2 for PC bytes)
+  74              sp_addr -= (14 + 2);
+  75               // Retrieve PC low and high bytes
+  76              pc_value = *(sp_addr);         // Low byte of PC
+  77              pc_value |= (*(sp_addr + 1)) << 8; // High byte of PC
+  78          
+  79              unsigned int dptr_value = ((unsigned int)DPH << 8) | DPL; // Combine DPH and DPL for DPTR
+  80              unsigned char psw = PSW;    // Read the Program Status Word
+  81          
+  82          
+  83              // Access R0–R7 by their RAM addresses
+  84              unsigned char r0 = *((unsigned char __xdata *) 0x00);
+  85              unsigned char r1 = *((unsigned char __xdata *) 0x01);
+  86              unsigned char r2 = *((unsigned char __xdata *) 0x02);
+  87              unsigned char r3 = *((unsigned char __xdata *) 0x03);
+  88              unsigned char r4 = *((unsigned char __xdata *) 0x04);
+  89              unsigned char r5 = *((unsigned char __xdata *) 0x05);
+  90              unsigned char r6 = *((unsigned char __xdata *) 0x06);
+  91              unsigned char r7 = *((unsigned char __xdata *) 0x07);
+  92          
+  93              // Print register values in the desired format
+  94              printf("\r\n;ACC B  C DPTR  R0 R1 R2 R3 R4 R5 R6 R7  SP    PC\r\n");
+  95              printf(";%02X  %02X %1X %04X  ", ACC, B, (psw & 0x80) ? 1 : 0, dptr_value); // ACC, B, Carry, DPTR
+  96          
+  97              // Print R0 to R7 (current register bank)
+  98              printf("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X  ", 
+  99                  r0, r1, r2, r3, r4, r5, r6, r7);
+C51 COMPILER V9.60.7.0   HEY                                                               12/02/2024 10:55:39 PAGE 3   
+
+ 100          
+ 101              // Print SP (Stack Pointer); PC is omitted in this version
+ 102              printf("%02X  %04X\r\n", SP, pc_value);
+ 103          }
+ 104          
+ 105          
+ 106          // Main Function
+ 107          void main() {
+ 108              uart_init();            // Initialize UART for debugging
+ 109              printf("Monitor Debugger Started...\n");
+ 110          
+ 111           // Enable INT1 for debugging
+ 112              unsigned char EX1 = *((unsigned char __xdata *) 0x00);
+ 113              unsigned char IT1 = *((unsigned char __xdata *) 0x00);
+ 114              unsigned char EA = *((unsigned char __xdata *) 0x00);
+ 115          
+ 116              EX1 = 1;                // Enable INT1 external interrupt
+ 117              IT1 = 0;                // Edge-triggered mode for INT1
+ 118              EA = 1;                 // Enable global interrupts
+ 119              
+ 120              jump_to_user_code();     // Jump to the user code at 0x4000
+ 121          }
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  17 ERROR(S)

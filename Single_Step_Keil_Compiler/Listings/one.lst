@@ -1,0 +1,203 @@
+A51 MACRO ASSEMBLER  ONE                                                                  12/05/2024 14:15:38 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\one.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE one.a51 SET(SMALL) DEBUG PRINT(.\Listings\one.lst) OBJECT(.\Objects\one
+                      .obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ;------------------------------------------------------
+                       2     ; 8051 Assembly Code Equivalent of C Program
+                       3     ;------------------------------------------------------
+                       4     
+                       5     
+                       6     ;------------------------------------------------------
+                       7     ; Code Section (Start at Code Memory ORG 0x0000)
+                       8     ;------------------------------------------------------
+0000                   9     ORG 0000H
+0000 020097           10     LJMP MAIN             ; Jump to the main program
+                      11     
+                      12     ;------------------------------------------------------
+                      13     ; External Interrupt 1 Vector
+                      14     ;------------------------------------------------------
+0013                  15     ORG 0013H
+0013 020078           16     LJMP INT1_HANDLER     ; Interrupt handler for INT1
+                      17     
+4000                  18     ORG 4000H
+4000 024005           19     LJMP USER
+                      20     
+                      21     
+0020                  22     ORG 0020H
+                      23     ;------------------------------------------------------
+                      24     ; UART Initialization (uart_init)
+                      25     ;------------------------------------------------------
+0020                  26     UART_INIT:
+0020 438920           27         ORL TMOD, #20H      ; Set Timer 1 in Mode 2 (8-bit auto-reload)
+0023 758DFD           28         MOV TH1, #0FDH      ; Load TH1 for 9600 baud (11.0592 MHz)
+0026 759850           29         MOV SCON, #50H      ; Configure UART: 8-bit, REN enabled
+0029 D28E             30         SETB TR1            ; Start Timer 1
+002B D299             31         SETB TI             ; Set TI to indicate transmitter ready
+002D 22               32         RET
+                      33     
+                      34     ;------------------------------------------------------
+                      35     ; Transmit Character (putchar)
+                      36     ; Input: ACC (Character to transmit)
+                      37     ;------------------------------------------------------
+002E                  38     PUTCHAR:
+002E F599             39         MOV SBUF, A         ; Move character to UART buffer (SBUF)
+0030                  40     WAIT_TI:
+0030 3099FD           41         JNB TI, WAIT_TI     ; Wait until TI is set
+0033 C299             42         CLR TI              ; Clear TI for the next transmission
+0035 22               43         RET
+                      44     
+                      45     ;------------------------------------------------------
+                      46     ; Receive Character (getchar)
+                      47     ; Output: ACC (Received character)
+                      48     ;------------------------------------------------------
+0036                  49     GETCHAR:
+0036                  50     WAIT_RI:
+0036 3098FD           51         JNB RI, WAIT_RI     ; Wait until RI is set
+0039 C298             52         CLR RI              ; Clear RI for the next reception
+003B E599             53         MOV A, SBUF         ; Move received character to ACC
+003D 22               54         RET
+                      55     
+                      56     ;------------------------------------------------------
+                      57     ; Print String Subroutine
+A51 MACRO ASSEMBLER  ONE                                                                  12/05/2024 14:15:38 PAGE     2
+
+                      58     ;------------------------------------------------------
+003E                  59     PRINT_STRING:
+003E 90004B           60         MOV DPTR, #MSG_START ; Load address of the string
+0041                  61     PRINT_LOOP:
+0041 E4               62         CLR A
+0042 93               63         MOVC A, @A+DPTR     ; Load character from code memory
+0043 6005             64         JZ END_PRINT        ; End of string (0x00)
+0045 112E             65         ACALL PUTCHAR       ; Transmit the character
+0047 A3               66         INC DPTR            ; Move to the next character
+0048 80F7             67         SJMP PRINT_LOOP
+004A                  68     END_PRINT:
+004A 22               69         RET
+                      70     
+004B                  71     MSG_START: 
+004B 4D6F6E69         72         DB 'Monitor Debugger Started...', 0
+004F 746F7220                
+0053 44656275                
+0057 67676572                
+005B 20537461                
+005F 72746564                
+0063 2E2E2E00                
+                      73     
+                      74     ;------------------------------------------------------
+                      75     ; Jump to User Code (jump_to_user_code)
+                      76     ;------------------------------------------------------
+0067                  77     JUMP_TO_USER_CODE:
+0067 113E             78         ACALL PRINT_STRING   ; Print the start message
+0069 904000           79         MOV DPTR, #04000H    ; Load user code address
+006C C28A             80         CLR IT1              ; Configure INT1 as level-triggered
+006E D2AA             81         SETB EX1             ; Enable External Interrupt 1
+0070 D2AF             82         SETB EA              ; Enable global interrupts
+0072 113E             83             ACALL PRINT_STRING   ; Print the start message
+0074 024000           84             LJMP 04000H
+0077 22               85             RET
+                      86     
+                      87     ;------------------------------------------------------
+                      88     ; Interrupt Handler (INT1)
+                      89     ;------------------------------------------------------
+0078                  90     INT1_HANDLER:
+0078 C0E0             91         PUSH ACC             ; Save ACC
+007A C0D0             92         PUSH PSW             ; Save PSW
+007C C082             93         PUSH DPL             ; Save DPL
+007E C083             94         PUSH DPH             ; Save DPH
+                      95     
+                      96         ; Print the debugging information (stub implementation)
+0080 1190             97         ACALL PRINT_DEBUG_INFO
+                      98         ; Wait for Enter key to continue
+0082                  99     WAIT_KEY:
+0082 1136            100         ACALL GETCHAR
+0084 B40DFB          101         CJNE A, #0DH, WAIT_KEY ; Wait for '\r' (Enter key)
+                     102     
+0087 D083            103         POP DPH              ; Restore DPH
+0089 D082            104         POP DPL              ; Restore DPL
+008B D0D0            105         POP PSW              ; Restore PSW
+008D D0E0            106         POP ACC              ; Restore ACC
+008F 32              107         RETI                 ; Return from interrupt
+                     108     
+                     109     ;------------------------------------------------------
+                     110     ; Debugging Information Printing
+                     111     ;------------------------------------------------------
+0090                 112     PRINT_DEBUG_INFO: 
+0090 112E            113         ACALL PUTCHAR 
+0092 E581            114             MOV A, SP
+0094 112E            115             ACALL PUTCHAR 
+0096 22              116         RET
+                     117     
+A51 MACRO ASSEMBLER  ONE                                                                  12/05/2024 14:15:38 PAGE     3
+
+                     118     ;------------------------------------------------------
+                     119     ; Main Program
+                     120     ;------------------------------------------------------
+0097                 121     MAIN:
+0097 1120            122         ACALL UART_INIT      ; Initialize UART
+0099 113E            123         ACALL PRINT_STRING   ; Print start message
+009B 1167            124         ACALL JUMP_TO_USER_CODE ; Jump to user code
+009D 80FE            125         SJMP $              ; Infinite loop
+                     126     
+                     127     
+4005                 128     ORG 4005H
+4005                 129     USER:
+4005 7411            130             MOV A, #11H
+                     131             
+4007 75F012          132             MOV B, #12H
+400A 7813            133             MOV R0, #13H
+                     134     ;------------------------------------------------------
+                     135     ; End of Program
+                     136     ;------------------------------------------------------
+                     137     
+                     138     END
+A51 MACRO ASSEMBLER  ONE                                                                  12/05/2024 14:15:38 PAGE     4
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+ACC. . . . . . . .  D ADDR   00E0H   A   
+B. . . . . . . . .  D ADDR   00F0H   A   
+DPH. . . . . . . .  D ADDR   0083H   A   
+DPL. . . . . . . .  D ADDR   0082H   A   
+EA . . . . . . . .  B ADDR   00A8H.7 A   
+END_PRINT. . . . .  C ADDR   004AH   A   
+EX1. . . . . . . .  B ADDR   00A8H.2 A   
+GETCHAR. . . . . .  C ADDR   0036H   A   
+INT1_HANDLER . . .  C ADDR   0078H   A   
+IT1. . . . . . . .  B ADDR   0088H.2 A   
+JUMP_TO_USER_CODE.  C ADDR   0067H   A   
+MAIN . . . . . . .  C ADDR   0097H   A   
+MSG_START. . . . .  C ADDR   004BH   A   
+PRINT_DEBUG_INFO .  C ADDR   0090H   A   
+PRINT_LOOP . . . .  C ADDR   0041H   A   
+PRINT_STRING . . .  C ADDR   003EH   A   
+PSW. . . . . . . .  D ADDR   00D0H   A   
+PUTCHAR. . . . . .  C ADDR   002EH   A   
+RI . . . . . . . .  B ADDR   0098H.0 A   
+SBUF . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . .  D ADDR   0098H   A   
+SP . . . . . . . .  D ADDR   0081H   A   
+TH1. . . . . . . .  D ADDR   008DH   A   
+TI . . . . . . . .  B ADDR   0098H.1 A   
+TMOD . . . . . . .  D ADDR   0089H   A   
+TR1. . . . . . . .  B ADDR   0088H.6 A   
+UART_INIT. . . . .  C ADDR   0020H   A   
+USER . . . . . . .  C ADDR   4005H   A   
+WAIT_KEY . . . . .  C ADDR   0082H   A   
+WAIT_RI. . . . . .  C ADDR   0036H   A   
+WAIT_TI. . . . . .  C ADDR   0030H   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)
